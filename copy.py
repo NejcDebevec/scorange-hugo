@@ -18,7 +18,7 @@ widget:
 """
 
 
-def add_front_matter(filename,widget):
+def add_front_matter(filename, widget):
     front_matter = "+++\n"
 
     with open(filename, 'r+') as f:
@@ -47,6 +47,8 @@ path:
 location of the .md file
 
 """
+
+
 def copy_images(path,filename):
     with open(path+filename, 'r+') as f:
         content = f.read()
@@ -75,18 +77,18 @@ filename:
 """
 
 
-def build_json(filename):
+def build_json(files):
     json_content = {}
     widgets = {}
-    with open(filename, 'r+') as f:
-        widgets = json.loads(f.read())
-        for widget in widgets:
-            widget_obj = widgets[widget]
-            if widget_obj["category"] not in json_content:
-                json_content[widget_obj["category"]] = []
-            json_content[widget_obj["category"]].append(widget_obj)
-            widget_obj['url'] = url = widget_obj['title'].lower().replace(" ", "_")
-
+    for file in files:
+        with open(file, 'r+') as f:
+            widgets.update(json.loads(f.read()))
+            for widget in widgets:
+                widget_obj = widgets[widget]
+                if widget_obj["category"] not in json_content:
+                    json_content[widget_obj["category"]] = []
+                json_content[widget_obj["category"]].append(widget_obj)
+                widget_obj['url'] = widget_obj['title'].lower().replace(" ", "_")
 
     with open('data/widgets.json', 'w') as outfile:
         json.dump(json_content, outfile)
@@ -106,28 +108,29 @@ files = glob.glob('external/**/widget_data.json', recursive=True)
 if len(files) < 1:
     print("Can't find widget_data.json file.")
     exit()
-json_content = {}
 
-path = files[0].split("widget_data")[0]
-file = files[0]
+# path = files[0].split("widget_data")[0]
 location = "content/widget-catalog/"
 
-widgets_data = build_json(file)
+widgets_data = build_json(files)
 
 # open widget_data.json file
-with open(file, 'r+') as f:
-    widgets = json.loads(f.read())
-    # for each widget in widget_data.json file generate FrontMatter and copy .md file and icon image
-    for widget in widgets:
-        widget_data = widgets[widget]
-        text = add_front_matter(path+widget_data['file'], widgets_data[widget_data['title']])
-        copy_images(path,widget_data['file'])
-        with open(location+widget_data['file'].split("/")[-1], 'w') as tmp:
-            tmp.write(text)
-            tmp.close()
-        image_path = "static/"+'/'.join(widget_data['icon'].split('/')[:-1])+"/"
-        try:
-            shutil.copy2(path + widget_data['icon'], image_path)
-        except IOError as e:
-            os.makedirs(image_path)
-            shutil.copy2(path + widget_data['icon'], image_path)
+for file in files:
+    path = file.split("widget_data")[0]
+    with open(file, 'r+') as f:
+        widgets = json.loads(f.read())
+        # for each widget in widget_data.json file generate FrontMatter and copy .md file and icon image
+        for widget in widgets:
+            widget_data = widgets[widget]
+            text = add_front_matter(path+widget_data['file'], widgets_data[widget_data['title']])
+            copy_images(path,widget_data['file'])
+            with open(location+widget_data['file'].split("/")[-1], 'w') as tmp:
+                tmp.write(text)
+                tmp.close()
+            image_path = "static/"+'/'.join(widget_data['icon'].split('/')[:-1])+"/"
+            try:
+                shutil.copy2(path + widget_data['icon'], image_path)
+            except IOError as e:
+                os.makedirs(image_path)
+                shutil.copy2(path + widget_data['icon'], image_path)
+    print("Documentation files(.md, images, json) from submodules were copied to HUGO project. ")
